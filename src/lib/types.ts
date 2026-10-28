@@ -1,5 +1,5 @@
-export type Level = 'A1' | 'A1+' | 'A2' | 'A2+' | 'B1';
-export const LEVELS: Level[] = ['A1', 'A1+', 'A2', 'A2+', 'B1'];
+export const LEVELS = ['A1', 'A1+', 'A2', 'A2+', 'B1', 'B1+', 'B2', 'B2+', 'C1'] as const;
+export type Level = (typeof LEVELS)[number];
 
 export type EnglishSupport = 'lots' | 'some' | 'minimal';
 

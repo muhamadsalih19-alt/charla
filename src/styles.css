@@ -313,3 +313,16 @@ a { color: var(--teal); }
 .grade.easy { background: var(--teal-soft); }
 
 .goal-ring { flex-shrink: 0; }
+
+/* Course stages */
+.continue-cta { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; text-align: left; position: relative; padding-right: 36px; border: 2px solid var(--teal); }
+.continue-cta b { font-size: 18px; }
+.continue-cta span { font-size: 14px; color: var(--muted); }
+.continue-cta .chev { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-size: 22px; }
+.course-stage { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.course-stage > summary { display: flex; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer; list-style: none; }
+.course-stage > summary::-webkit-details-marker { display: none; }
+.course-stage > summary::after { content: '›'; font-size: 22px; color: var(--muted); transition: transform 0.2s; }
+.course-stage[open] > summary::after { transform: rotate(90deg); }
+.stage-num { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; font-weight: 700; background: var(--accent-soft); color: var(--accent); flex-shrink: 0; }
+.course-stage .path { padding: 0 10px 12px; }

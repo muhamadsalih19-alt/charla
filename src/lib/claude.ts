@@ -4,7 +4,7 @@ import * as z from 'zod';
 import type { Scenario } from '../data/scenarios';
 import type { Unit } from '../data/units';
 import { drillSystem, gradeSystem, placementSystem, reviewSystem, tutorSystem } from './prompts';
-import type { ChatTurn, PlacementResult, Profile, SessionReview, TutorReply } from './types';
+import { LEVELS, type ChatTurn, type PlacementResult, type Profile, type SessionReview, type TutorReply } from './types';
 import * as demo from './demo';
 
 export const FAST_MODEL = 'claude-haiku-5-5';
@@ -126,7 +126,7 @@ ${plainTranscript(turns)}`;
 }
 
 const PlacementSchema = z.object({
-  level: z.enum(['A1', 'A1+', 'A2', 'A2+', 'B1']),
+  level: z.enum(LEVELS),
   speaking: z.number().int(),
   listening: z.number().int(),
   grammar: z.number().int(),

@@ -1,7 +1,7 @@
 import type { Go } from '../App';
 import { TopBar } from '../components/ui';
 import { FREE_CHAT, PLACEMENT, SCENARIOS, TUTOR_MODE, type Scenario } from '../data/scenarios';
-import { LEVELS } from '../lib/types';
+import { LEVELS, type Level } from '../lib/types';
 import { useApp } from '../state';
 
 export function HablarList({ go }: { go: Go }) {
@@ -31,8 +31,8 @@ export function HablarList({ go }: { go: Go }) {
       <h2 className="section">Scenarios</h2>
       <div className="list">
         {SCENARIOS.map((s) => {
-          const need = LEVELS.indexOf(s.minLevel as (typeof LEVELS)[number]);
-          return item(s, need > lvl ? 'Stretch' : need === lvl ? 'Your level' : undefined);
+          const need = LEVELS.indexOf(s.minLevel as Level);
+          return item(s, need > lvl + 1 ? 'Later' : need > lvl ? 'Stretch' : need === lvl ? 'Your level' : undefined);
         })}
       </div>
       <h2 className="section">Level check</h2>

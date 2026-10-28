@@ -11,6 +11,8 @@ export interface Scenario {
   opener: string;
   openerEn: string;
   minLevel: string;
+  /** what a lesson wants the learner to practise in this conversation */
+  focus?: string;
 }
 
 export const SCENARIOS: Scenario[] = [
@@ -104,6 +106,58 @@ export const SCENARIOS: Scenario[] = [
     opener: '¡Hola! ¿Qué tal tu fin de semana? ¿Qué hiciste?',
     openerEn: 'Hi! How was your weekend? What did you do?',
     minLevel: 'A2',
+  },
+  {
+    id: 'entrevista',
+    title: 'Entrevista de trabajo',
+    titleEn: 'A job interview',
+    emoji: '💼',
+    role: 'Lic. Ramírez, a friendly but professional HR manager at a tech company in Monterrey',
+    setting: 'A video-call job interview for a project coordinator position. Speak formally with usted.',
+    goal: 'Preséntate, habla de tu experiencia y haz una pregunta sobre el puesto.',
+    goalEn: 'Introduce yourself, describe your experience and ask one question about the job.',
+    opener: 'Buenos días, gracias por venir. Para empezar, ¿me podría hablar un poco de usted?',
+    openerEn: 'Good morning, thanks for coming. To start, could you tell me a little about yourself?',
+    minLevel: 'B1',
+  },
+  {
+    id: 'departamento',
+    title: 'Buscar departamento',
+    titleEn: 'Finding an apartment',
+    emoji: '🏠',
+    role: 'Gaby, an upbeat real-estate agent in Mexico City who has several apartments to show',
+    setting: 'Gaby’s office in Coyoacán, Mexico City. She asks what the learner needs and suggests options, each with a catch.',
+    goal: 'Describe el departamento que buscas, pregunta por la renta y negocia algo.',
+    goalEn: 'Describe the apartment you want, ask about the rent and negotiate something.',
+    opener: '¡Hola, mucho gusto! Soy Gaby. Cuénteme, ¿qué tipo de departamento está buscando?',
+    openerEn: 'Hi, nice to meet you! I’m Gaby. Tell me, what kind of apartment are you looking for?',
+    minLevel: 'B1+',
+  },
+  {
+    id: 'reclamo',
+    title: 'Hacer un reclamo',
+    titleEn: 'Making a complaint',
+    emoji: '📦',
+    role: 'Diego, a polite customer-service agent at an electronics store in Santiago de Chile who sticks to store policy at first',
+    setting: 'The returns counter. The learner bought headphones two weeks ago and one side stopped working. The receipt is lost, so Diego first offers only a repair.',
+    goal: 'Explica el problema con tus audífonos y consigue un cambio o un reembolso.',
+    goalEn: 'Explain the problem with your headphones and get an exchange or a refund.',
+    opener: 'Buenas tardes, bienvenido a Electro Sur. ¿En qué le puedo ayudar?',
+    openerEn: 'Good afternoon, welcome to Electro Sur. How can I help you?',
+    minLevel: 'B1+',
+  },
+  {
+    id: 'debate',
+    title: 'Un debate amistoso',
+    titleEn: 'A friendly debate',
+    emoji: '🎙️',
+    role: 'Sofi, your tutor, playing devil’s advocate in a friendly debate',
+    setting: 'A café in Mexico City. Sofi politely takes the opposite side of whatever the learner thinks and pushes back with real arguments.',
+    goal: 'Defiende tu opinión con tres argumentos y responde a los de Sofi.',
+    goalEn: 'Defend your opinion with three arguments and answer Sofi’s.',
+    opener: '¡Hola! Hoy te propongo un debate. ¿Crees que trabajar desde casa es mejor que ir a la oficina?',
+    openerEn: 'Hi! Today I propose a debate. Do you think working from home is better than going to the office?',
+    minLevel: 'B2',
   },
 ];
 

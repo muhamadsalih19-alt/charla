@@ -7,6 +7,10 @@ const LEVEL_GUIDE: Record<string, string> = {
   A2: 'Can talk about routines and recent past. Use present, "ir a" future and simple preterite. Sentences up to about 12 words, everyday vocabulary.',
   'A2+': 'Comfortable with everyday topics. Mix preterite and imperfect, object pronouns, some less common vocabulary. Natural but clear sentences.',
   B1: 'Can sustain a conversation. Speak naturally at a moderate pace, use all common tenses, occasional subjunctive and idioms, explaining idioms briefly.',
+  'B1+': 'Handles most everyday situations. Natural pace, present and past subjunctive, conditionals, common idioms and colloquial expressions without explaining them unless asked.',
+  B2: 'Fluent on familiar and abstract topics. Speak like a native at a natural pace: all tenses, hypotheticals, rich connectors, idioms and regional expressions. Push for precision and nuance.',
+  'B2+': 'Very fluent. Talk as with a native friend: fast, idiomatic, nuanced vocabulary, abstract topics. Correct only subtle errors and unnatural phrasing.',
+  C1: 'Near-native. Use the full range of the language, including register shifts and specialised vocabulary. Polish style: point out what a native would say instead.',
 };
 
 const ENGLISH_GUIDE: Record<string, string> = {
@@ -35,18 +39,21 @@ export function tutorSystem(s: Scenario, profile: Profile, name: string): string
   const special =
     s.id === 'placement'
       ? `This is a placement chat to find the learner's level. Ask one question per turn and climb in difficulty only when the previous answer went well:
-1. name and how they are  2. where they are from / where they live  3. work or studies  4. a normal day (present tense)  5. what they like (gustar)  6. last weekend (past tense)  7. plans for next weekend (future)  8. an opinion question.
-If an answer shows they struggled, stay at that difficulty or step back down. After the learner's 7th reply (or sooner if they are clearly lost twice in a row), set goal_complete to true and say a warm goodbye. Do not recast corrections aggressively here; just keep them talking. Still fill the correction fields when there is an error.`
+1. name and how they are  2. where they are from / where they live  3. work or studies  4. a normal day (present tense)  5. what they like (gustar)  6. last weekend (past tense)  7. plans for next weekend (future)  8. an opinion question  9. a hypothetical ("¿qué harías si…?")  10. a regret or a debate point that needs the subjunctive.
+If an answer shows they struggled, stay at that difficulty or step back down. Only go past step 7 if they are handling everything easily. Finish after the learner's 7th reply, or after the 10th if they are clearly advanced, or sooner if they are lost twice in a row: set goal_complete to true and say a warm goodbye. Do not recast corrections aggressively here; just keep them talking. Still fill the correction fields when there is an error.`
       : s.id === 'pregunta'
         ? `The learner asks questions about Spanish, often in English. Put your full explanation in english_hint (clear, plain English, short examples, no markdown). reply_es is a short spoken Spanish line that models the answer, for example the phrase they asked about used in a sentence. Suggestions are follow-up questions they might ask, in English or Spanish. goal_complete stays false.`
         : `Stay in character as described. Gently steer toward the goal so the learner has to do the talking. When the goal is achieved, set goal_complete to true and close the scene naturally.`;
+  const focus = s.focus
+    ? `\nLesson focus: the learner just studied this, so ask things that make them use it, model it in your own replies, and recast mistakes with it:\n${s.focus}\nAim for 6 to 10 learner replies before goal_complete.\n`
+    : '';
 
   return `You are ${s.role}, in the Latin American Spanish speaking-practice app "Charla".
 Setting: ${s.setting}
 Learner's goal for this conversation: ${s.goalEn}
 
 ${special}
-
+${focus}
 How to speak:
 - Natural Latin American Spanish (neutral Mexican by default; local flavor fits the setting). Always "ustedes", never "vosotros". Latin American vocabulary (carro, celular, computadora, jugo, papa).
 - reply_es is read aloud by text-to-speech: no emoji, no markdown, no parentheses or brackets. 1 to 3 short sentences. Usually end with a question or something that invites the learner to keep talking.
@@ -87,7 +94,7 @@ Judge only the learner's lines. Be encouraging but honest.
 
 export function placementSystem(): string {
   return `You are an expert Spanish teacher placing a new learner after a short spoken chat in a Latin American Spanish app. The learner's lines came through speech recognition, so ignore accents, capitalization and punctuation.
-Estimate their level on this scale: A1 (only memorized words), A1+ (short simple exchanges), A2 (routines and simple past), A2+ (comfortable everyday talk), B1 (can sustain a conversation).
+Estimate their level on this scale: A1 (only memorized words), A1+ (short simple exchanges), A2 (routines and simple past), A2+ (comfortable everyday talk), B1 (can sustain a conversation), B1+ (uses the subjunctive and hypotheticals with some errors), B2 (fluent and accurate on most topics), B2+ (very fluent, few errors), C1 (near-native). When unsure between two levels, pick the lower one.
 Give integer scores 0-100 for speaking, listening (did they understand the questions), grammar and vocabulary.
 english_support: "lots" if they needed English often, "some" if occasionally, "minimal" if never.
 error_types: short English tags for their recurring error types (max 5).
@@ -101,8 +108,8 @@ Create 8 varied drills for the unit described, pitched at the learner's level, w
 Each drill has a "kind":
 - "choice": prompt_en is a question in English (for example "How do you say 'I am tired'?" or "Which is correct?"), options are 3 or 4 Spanish options, answer is exactly one of the options.
 - "fill": es is a Spanish sentence with "___" where one word is missing, prompt_en is its English meaning, options are 3 or 4 single-word options, answer is the correct option.
-- "translate": prompt_en is an English sentence of at most 8 words, answer is a natural Spanish translation.
-- "build": prompt_en is an English sentence, answer is the Spanish sentence of 3 to 7 words that the learner will assemble from shuffled words.
+- "translate": prompt_en is an English sentence of at most 8 words (up to 14 at B1 and above), answer is a natural Spanish translation.
+- "build": prompt_en is an English sentence, answer is the Spanish sentence of 3 to 9 words that the learner will assemble from shuffled words.
 Unused fields are empty strings or empty arrays. Spanish must be correct and natural. Mix the kinds: at least 2 choice, 2 fill, 2 translate, 2 build.`;
 }
 

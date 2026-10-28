@@ -1,3 +1,4 @@
+import { UNITS } from '../data/units';
 import { LEVELS, type Level, type PlacementResult, type Profile, type SessionReview } from './types';
 
 const clamp = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
@@ -33,8 +34,8 @@ export function applyPlacement(p: Profile, r: PlacementResult): Profile {
 
 /** Units the placement shows you already know, so the path starts in the right place. */
 function unitsBelow(level: Level): string[] {
-  const upTo: Record<Level, number> = { A1: 0, 'A1+': 2, A2: 4, 'A2+': 6, B1: 8 };
-  return Array.from({ length: upTo[level] }, (_, i) => `u${i + 1}`);
+  const placed = LEVELS.indexOf(level);
+  return UNITS.filter((u) => LEVELS.indexOf(u.level) < placed).map((u) => u.id);
 }
 
 /** Moves skills gently toward this session's scores, and applies the reviewer's level call. */
@@ -83,4 +84,8 @@ export const LEVEL_LABEL: Record<Level, string> = {
   A2: 'Elementary',
   'A2+': 'Elementary+',
   B1: 'Intermediate',
+  'B1+': 'Intermediate+',
+  B2: 'Upper intermediate',
+  'B2+': 'Upper intermediate+',
+  C1: 'Advanced',
 };
