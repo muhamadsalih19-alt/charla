@@ -54,15 +54,17 @@ export function Home({ go }: { go: Go }) {
         </div>
       </section>
 
-      {!profile.placed && (
-        <button className="card placement-cta" onClick={() => go({ name: 'conversation', scenario: PLACEMENT })}>
-          <Avatar state="idle" size={56} />
-          <div>
-            <b>Find your level</b>
-            <span>A 5-minute chat with Sofi so the app fits you.</span>
-          </div>
-        </button>
-      )}
+      <button className="card placement-cta" onClick={() => go({ name: 'conversation', scenario: PLACEMENT })}>
+        <Avatar state="idle" size={56} />
+        <div>
+          <b>{profile.placed ? 'Re-check my level' : 'Find your level'}</b>
+          <span>
+            {profile.placed
+              ? `You’re ${profile.level} now. A 5-minute chat and Sofi decides your level again.`
+              : 'A 5-minute chat with Sofi so the app fits you.'}
+          </span>
+        </div>
+      </button>
 
       <div className="mode-grid">
         <button className="mode hablar" onClick={() => go({ name: 'hablar' })}>

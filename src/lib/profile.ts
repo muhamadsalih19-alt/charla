@@ -27,8 +27,11 @@ export function applyPlacement(p: Profile, r: PlacementResult): Profile {
     skills: { speaking: clamp(r.speaking), listening: clamp(r.listening), grammar: clamp(r.grammar), vocabulary: clamp(r.vocabulary) },
     englishSupport: r.english_support,
     errorPatterns: addErrors(p.errorPatterns, r.error_types),
-    notes: r.notes,
-    completedUnits: unitsBelow(r.level),
+    // keep what Sofi already knows about you on a re-check
+    notes: p.notes ? `${r.notes} Earlier notes: ${p.notes}`.slice(0, 700) : r.notes,
+    // a re-check never takes away lessons you already finished
+    completedUnits: [...new Set([...p.completedUnits, ...unitsBelow(r.level)])],
+    pendingLevel: undefined,
   };
 }
 
