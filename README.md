@@ -24,3 +24,7 @@ npm run dev
 
 Repo secrets: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and `REMINDER_CODE` (copied from the app's
 Settings → Daily reminder). The workflow runs hourly and only sends at the hour you picked.
+
+## Credits
+
+Sofi's 3D model is the "brunette" avatar from [TalkingHead](https://github.com/met4citizen/TalkingHead) (created with Ready Player Me, CC BY-NC 4.0, non-commercial use). 3D animation and lip-sync by TalkingHead (MIT).

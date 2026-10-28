@@ -39,6 +39,8 @@ export async function tutorTurn(s: Scenario, turns: ChatTurn[]): Promise<TutorRe
     new_words: i === 0 ? [{ es: 'ahorita', en: 'right now (Mexico)' }] : [],
     suggestions: ['Sí, por favor.', 'No, gracias.', '¿Cuánto cuesta?'],
     goal_complete: learnerTurns.length >= lines.length,
+    mood: wrongSoy ? 'neutral' : 'happy',
+    gesture: learnerTurns.length >= lines.length ? 'thumbup' : 'none',
   };
 }
 

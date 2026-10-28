@@ -3,6 +3,8 @@ import type { Card, DayLog, Profile, Settings } from './types';
 
 export const DEFAULT_SETTINGS: Settings = {
   apiKey: '',
+  openaiKey: '',
+  openaiVoice: 'coral',
   learnerName: '',
   dailyGoalMinutes: 15,
   speechRate: 0.9,
@@ -60,14 +62,14 @@ export async function clearData() {
 
 /** Backup excludes the API key so the file is safe to keep anywhere. */
 export function exportBackup(data: AppData): string {
-  return JSON.stringify({ ...data, settings: { ...data.settings, apiKey: '' }, exported: new Date().toISOString() }, null, 2);
+  return JSON.stringify({ ...data, settings: { ...data.settings, apiKey: '', openaiKey: '' }, exported: new Date().toISOString() }, null, 2);
 }
 
 export function parseBackup(text: string, current: AppData): AppData {
   const b = JSON.parse(text) as Partial<AppData>;
   if (!b.profile || !Array.isArray(b.cards)) throw new Error('This file is not a Charla backup.');
   return {
-    settings: { ...current.settings, ...(b.settings ?? {}), apiKey: current.settings.apiKey },
+    settings: { ...current.settings, ...(b.settings ?? {}), apiKey: current.settings.apiKey, openaiKey: current.settings.openaiKey },
     profile: { ...DEFAULT_PROFILE, ...b.profile },
     cards: b.cards,
     days: b.days ?? [],

@@ -4,6 +4,7 @@ import { TopBar } from '../components/ui';
 import { PLACEMENT } from '../data/scenarios';
 import { friendlyError, testKey, TUTOR_MODELS } from '../lib/claude';
 import { downloadCalendarReminder, enablePush, isInstalled, REPO_SECRETS_URL, testNotification } from '../lib/reminders';
+import { OPENAI_VOICES } from '../lib/audio';
 import { speak, spanishVoices } from '../lib/speech';
 import { clearData, exportBackup, parseBackup } from '../lib/storage';
 import { useApp } from '../state';
@@ -108,6 +109,8 @@ export function SettingsScreen({ go }: { go: Go }) {
   const [keyDraft, setKeyDraft] = useState(s.apiKey);
   const [keyStatus, setKeyStatus] = useState('');
   const [voices, setVoices] = useState(spanishVoices());
+  const [voiceDraft, setVoiceDraft] = useState(s.openaiKey);
+  const [voiceStatus, setVoiceStatus] = useState('');
   const [msg, setMsg] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -132,6 +135,24 @@ export function SettingsScreen({ go }: { go: Go }) {
     } catch (e) {
       setKeyStatus(friendlyError(e));
     }
+  };
+
+  const testVoice = (key = s.openaiKey) => {
+    if (key) setVoiceStatus('Loading Sofi’s voice…');
+    speak('¡Hola! Soy Sofi. ¿Qué tal suena mi voz?', {
+      rate: s.speechRate,
+      voiceURI: s.voiceURI,
+      onStart: () => key && setVoiceStatus('✓ Natural voice is on. It plays even with your phone on silent.'),
+      onError: (m) => setVoiceStatus(m),
+    });
+  };
+
+  const saveVoiceKey = () => {
+    const k = voiceDraft.trim();
+    set({ openaiKey: k });
+    // configureVoice runs on the next render, so test with the new key directly
+    if (!k) setVoiceStatus('Natural voice off. Sofi uses the phone’s voice.');
+    else setTimeout(() => testVoice(k), 50);
   };
 
   const download = () => {
@@ -207,8 +228,46 @@ export function SettingsScreen({ go }: { go: Go }) {
 
       <section className="card form">
         <h2 className="card-title">Sofi’s voice</h2>
+        <p className="small">
+          <b>Natural voice (recommended).</b> A realistic voice that also lip-syncs with Sofi and plays with your phone on silent. Needs an OpenAI API key, about
+          1 to 2 cents per minute of Sofi talking.
+        </p>
+        <input
+          value={voiceDraft}
+          onChange={(e) => setVoiceDraft(e.target.value)}
+          placeholder="OpenAI key (sk-…)"
+          type="password"
+          autoComplete="off"
+          autoCapitalize="off"
+          spellCheck={false}
+        />
+        <div className="row">
+          <button className="btn primary" onClick={saveVoiceKey}>
+            Save and test
+          </button>
+        </div>
+        {voiceStatus && <p className="small">{voiceStatus}</p>}
+        <p className="fine">
+          Stored only on this phone and sent only to OpenAI. Create one at{' '}
+          <a href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer">
+            platform.openai.com/api-keys
+          </a>{' '}
+          and set a monthly budget under Limits.
+        </p>
+        {s.openaiKey && (
+          <label className="field">
+            <span>Natural voice</span>
+            <select value={s.openaiVoice} onChange={(e) => set({ openaiVoice: e.target.value })}>
+              {OPENAI_VOICES.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label className="field">
-          <span>Voice</span>
+          <span>{s.openaiKey ? 'Backup phone voice' : 'Phone voice'}</span>
           <select value={s.voiceURI} onChange={(e) => set({ voiceURI: e.target.value })}>
             <option value="">Automatic (Latin American first)</option>
             {voices.map((v) => (
@@ -220,14 +279,14 @@ export function SettingsScreen({ go }: { go: Go }) {
         </label>
         {!voices.length && <p className="fine">No Spanish voices found yet. On iPhone: Settings → Accessibility → Spoken Content → Voices → Spanish (Mexico).</p>}
         <label className="field">
-          <span>Speed: {s.speechRate.toFixed(2)}x</span>
+          <span>Phone voice speed: {s.speechRate.toFixed(2)}x</span>
           <input type="range" min={0.5} max={1.2} step={0.05} value={s.speechRate} onChange={(e) => set({ speechRate: Number(e.target.value) })} />
         </label>
         <label className="check">
           <input type="checkbox" checked={s.autoSpeak} onChange={(e) => set({ autoSpeak: e.target.checked })} />
           Sofi speaks her replies automatically
         </label>
-        <button className="btn" onClick={() => speak('¡Hola! Soy Sofi. ¿Qué tal suena mi voz?', { rate: s.speechRate, voiceURI: s.voiceURI })}>
+        <button className="btn" onClick={() => testVoice()}>
           🔊 Test voice
         </button>
       </section>

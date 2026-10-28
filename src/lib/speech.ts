@@ -1,4 +1,5 @@
-// Text-to-speech and speech-to-text using the phone's built-in engines.
+// Text-to-speech (natural OpenAI voice when set up, else the phone's voice) and speech-to-text.
+import { playBuffer, stopBuffer, synthesize, unlockAudio } from './audio';
 
 let voicesCache: SpeechSynthesisVoice[] = [];
 
@@ -33,6 +34,7 @@ function pickVoice(voiceURI: string): SpeechSynthesisVoice | undefined {
 
 /** iOS only allows speech after a tap; call this from a click handler once. */
 export function unlockSpeech() {
+  unlockAudio();
   if (!('speechSynthesis' in window)) return;
   const u = new SpeechSynthesisUtterance(' ');
   u.volume = 0;
@@ -46,15 +48,68 @@ export interface SpeakOptions {
   onStart?: () => void;
   onBoundary?: () => void;
   onEnd?: () => void;
+  /** the natural voice failed; the phone's voice is used instead */
+  onError?: (message: string) => void;
+}
+
+/** Plays decoded speech. The 3D avatar registers one so it can lip-sync; otherwise audio plays directly. */
+export interface SpeechSink {
+  play(buf: AudioBuffer, text: string, onEnd: () => void): void;
+  stop(): void;
+}
+
+let natural = { key: '', voice: 'coral' };
+let sink: SpeechSink | null = null;
+let token = 0;
+
+export function configureVoice(key: string, voice: string) {
+  natural = { key, voice };
+}
+
+export function setSpeechSink(s: SpeechSink | null) {
+  sink = s;
+}
+
+function stopNatural() {
+  token++;
+  stopBuffer();
+  sink?.stop();
 }
 
 export function speak(text: string, opts: SpeakOptions = {}) {
+  stopNatural();
+  const lang = opts.lang ?? 'es-MX';
+  // deviceSpeak cancels the phone's voice itself, with the iOS workaround
+  if (!natural.key || !lang.startsWith('es') || !text.trim()) return deviceSpeak(text, opts);
+  cancelDevice();
+  const mine = token;
+  let ended = false;
+  const finish = () => {
+    if (ended) return;
+    ended = true;
+    opts.onEnd?.();
+  };
+  synthesize(natural.key, natural.voice, text, (opts.rate ?? 0.9) < 0.8)
+    .then((buf) => {
+      if (mine !== token) return finish();
+      opts.onStart?.();
+      if (sink) sink.play(buf, text, finish);
+      else playBuffer(buf, finish);
+    })
+    .catch((e: unknown) => {
+      if (mine !== token) return finish();
+      opts.onError?.(e instanceof Error ? e.message : 'The natural voice failed.');
+      deviceSpeak(text, { ...opts, onEnd: finish });
+    });
+}
+
+function deviceSpeak(text: string, opts: SpeakOptions) {
   if (!('speechSynthesis' in window) || !text.trim()) {
     opts.onEnd?.();
     return;
   }
   const synth = window.speechSynthesis;
-  // iOS can silently drop an utterance queued right after cancel(), so only cancel when needed.
+  // iOS can silently drop an utterance queued right after cancel(), so wait a moment if something was cut off.
   const busy = synth.speaking || synth.pending;
   if (busy) synth.cancel();
   const u = new SpeechSynthesisUtterance(text);
@@ -84,8 +139,14 @@ export function speak(text: string, opts: SpeakOptions = {}) {
   setTimeout(finish, Math.max(3000, (words / (2.6 * (opts.rate ?? 0.9))) * 1000 + 2500));
 }
 
+function cancelDevice() {
+  const synth = 'speechSynthesis' in window ? window.speechSynthesis : null;
+  if (synth && (synth.speaking || synth.pending)) synth.cancel();
+}
+
 export function stopSpeaking() {
-  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+  stopNatural();
+  cancelDevice();
 }
 
 // ---- Speech recognition ----

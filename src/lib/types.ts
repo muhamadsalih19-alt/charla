@@ -27,6 +27,9 @@ export interface Settings {
   voiceURI: string;
   tutorModel: string;
   autoSpeak: boolean;
+  /** OpenAI key for Sofi's natural voice; empty means the phone's built-in voice */
+  openaiKey: string;
+  openaiVoice: string;
   /** local hour (0-23) for the daily reminder */
   reminderHour: number;
 }
@@ -75,7 +78,14 @@ export interface TutorReply {
   new_words: { es: string; en: string }[];
   suggestions: string[];
   goal_complete: boolean;
+  mood: TutorMood;
+  gesture: TutorGesture;
 }
+
+export const TUTOR_MOODS = ['neutral', 'happy', 'love', 'sad', 'fear'] as const;
+export type TutorMood = (typeof TUTOR_MOODS)[number];
+export const TUTOR_GESTURES = ['none', 'thumbup', 'ok', 'shrug', 'handup', 'index', 'side'] as const;
+export type TutorGesture = (typeof TUTOR_GESTURES)[number];
 
 export interface SessionReview {
   summary_en: string;

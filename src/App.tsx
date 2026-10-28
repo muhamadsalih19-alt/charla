@@ -13,6 +13,7 @@ import { UnitScreen } from './screens/UnitScreen';
 import { DrillSession } from './screens/DrillSession';
 import { CardReview } from './screens/CardReview';
 import { SettingsScreen } from './screens/Settings';
+import { configureVoice } from './lib/speech';
 
 export type Screen =
   | { name: 'home' }
@@ -30,6 +31,7 @@ export type Go = (s: Screen) => void;
 
 function Router() {
   const { data } = useApp();
+  configureVoice(data.settings.openaiKey, data.settings.openaiVoice);
   const [screen, setScreen] = useState<Screen>(data.settings.learnerName ? { name: 'home' } : { name: 'welcome' });
   // bumps on every navigation so revisiting a screen starts it fresh
   const [visit, setVisit] = useState(0);

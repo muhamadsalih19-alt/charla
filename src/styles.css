@@ -326,3 +326,12 @@ a { color: var(--teal); }
 .course-stage[open] > summary::after { transform: rotate(90deg); }
 .stage-num { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; font-weight: 700; background: var(--accent-soft); color: var(--accent); flex-shrink: 0; }
 .course-stage .path { padding: 0 10px 12px; }
+
+/* 3D Sofi */
+.sofi3d { position: relative; height: 34dvh; min-height: 200px; max-height: 340px; flex-shrink: 0; margin: 0 12px; border-radius: 22px; overflow: hidden; background: radial-gradient(120% 90% at 50% 20%, var(--avatar-bg), var(--surface-2)); }
+.sofi3d.flat { display: grid; place-items: center; height: auto; min-height: 0; padding: 6px 0 10px; background: none; }
+.sofi3d-canvas { position: absolute; inset: 0; }
+.sofi3d-canvas canvas { display: block; }
+.sofi3d-loading { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: var(--muted); font-size: 14px; }
+.sofi3d-dots { position: absolute; left: 50%; bottom: 12px; right: auto; top: auto; transform: translateX(-50%); }
+.sofi3d-listening { position: absolute; inset: 0; border-radius: 22px; box-shadow: inset 0 0 0 4px var(--teal); animation: pulse 1.4s ease-in-out infinite; pointer-events: none; }

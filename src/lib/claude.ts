@@ -4,7 +4,7 @@ import * as z from 'zod';
 import type { Scenario } from '../data/scenarios';
 import type { Unit } from '../data/units';
 import { drillSystem, gradeSystem, placementSystem, reviewSystem, tutorSystem } from './prompts';
-import { LEVELS, type ChatTurn, type PlacementResult, type Profile, type SessionReview, type TutorReply } from './types';
+import { LEVELS, TUTOR_GESTURES, TUTOR_MOODS, type ChatTurn, type PlacementResult, type Profile, type SessionReview, type TutorReply } from './types';
 import * as demo from './demo';
 
 export const FAST_MODEL = 'claude-haiku-5-5';
@@ -71,6 +71,8 @@ const TutorSchema = z.object({
   new_words: z.array(Word),
   suggestions: z.array(z.string()),
   goal_complete: z.boolean(),
+  mood: z.enum(TUTOR_MOODS),
+  gesture: z.enum(TUTOR_GESTURES),
 });
 
 function transcriptMessages(turns: ChatTurn[]): Anthropic.MessageParam[] {

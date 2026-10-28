@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Go } from '../App';
 import { Avatar, type AvatarState } from '../components/Avatar';
+import { Sofi3D, type Expression } from '../components/Sofi3D';
 import type { Scenario } from '../data/scenarios';
 import { friendlyError, tutorTurn } from '../lib/claude';
 import { canRecognize, listen, speak, stopSpeaking, unlockSpeech, type Listener } from '../lib/speech';
@@ -33,6 +34,8 @@ export function Conversation({ scenario, go }: { scenario: Scenario; go: Go }) {
   const [showEn, setShowEn] = useState<Record<number, boolean>>({});
   const [openFix, setOpenFix] = useState<Record<number, boolean>>({});
   const [done, setDone] = useState(false);
+  const [expression, setExpression] = useState<Expression>();
+  const [voiceNote, setVoiceNote] = useState('');
   const listener = useRef<Listener | null>(null);
   const logEnd = useRef<HTMLDivElement>(null);
 
@@ -54,6 +57,7 @@ export function Conversation({ scenario, go }: { scenario: Scenario; go: Go }) {
       voiceURI: settings.voiceURI,
       onStart: () => setAvatar('speaking'),
       onEnd: () => setAvatar((a) => (a === 'speaking' ? 'idle' : a)),
+      onError: (m) => setVoiceNote(`${m} Using the phone’s voice for now.`),
     });
     setAvatar('speaking');
   };
@@ -89,6 +93,7 @@ export function Conversation({ scenario, go }: { scenario: Scenario; go: Go }) {
         return out;
       });
       setSuggestions(r.suggestions);
+      setExpression({ mood: r.mood, gesture: r.gesture, n: Date.now() });
       if (r.goal_complete) setDone(true);
       if (settings.autoSpeak) say(r.reply_es);
       else setAvatar('idle');
@@ -159,9 +164,7 @@ export function Conversation({ scenario, go }: { scenario: Scenario; go: Go }) {
         </button>
       </header>
 
-      <div className="stage">
-        <Avatar state={avatar} size={128} />
-      </div>
+      <Sofi3D state={avatar} expression={expression} />
 
       <div className="log">
         {turns.map((t, i) =>
@@ -225,6 +228,7 @@ export function Conversation({ scenario, go }: { scenario: Scenario; go: Go }) {
       </div>
 
       {error && <p className="error">{error}</p>}
+      {voiceNote && <p className="fine center">{voiceNote}</p>}
 
       {showHelp && (
         <div className="help-panel">

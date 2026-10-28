@@ -6,6 +6,21 @@ declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: str
 cleanupOutdatedCaches();
 precacheAndRoute(self.__WB_MANIFEST);
 
+// Sofi's 3D model is too big to precache, so keep a copy after the first download.
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  if (event.request.method !== 'GET' || !url.pathname.endsWith('.glb')) return;
+  event.respondWith(
+    caches.open('charla-models').then(async (cache) => {
+      const hit = await cache.match(event.request);
+      if (hit) return hit;
+      const res = await fetch(event.request);
+      if (res.ok) cache.put(event.request, res.clone());
+      return res;
+    }),
+  );
+});
+
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
 
