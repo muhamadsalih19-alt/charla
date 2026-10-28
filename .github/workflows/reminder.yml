@@ -1,0 +1,25 @@
+name: Daily reminder
+on:
+  schedule:
+    - cron: '7 * * * *' # every hour; the script only sends at your chosen local hour
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Send now, whatever the time
+        type: boolean
+        default: true
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-save web-push@3
+      - run: node scripts/send-reminder.mjs
+        env:
+          REMINDER_CODE: ${{ secrets.REMINDER_CODE }}
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          FORCE: ${{ inputs.force }}
