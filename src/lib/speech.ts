@@ -54,7 +54,9 @@ export function speak(text: string, opts: SpeakOptions = {}) {
     return;
   }
   const synth = window.speechSynthesis;
-  synth.cancel();
+  // iOS can silently drop an utterance queued right after cancel(), so only cancel when needed.
+  const busy = synth.speaking || synth.pending;
+  if (busy) synth.cancel();
   const u = new SpeechSynthesisUtterance(text);
   const lang = opts.lang ?? 'es-MX';
   if (lang.startsWith('es')) {
@@ -73,7 +75,10 @@ export function speak(text: string, opts: SpeakOptions = {}) {
   u.onboundary = () => opts.onBoundary?.();
   u.onend = finish;
   u.onerror = finish;
-  synth.speak(u);
+  // iOS sometimes leaves the engine paused after the app was in the background.
+  synth.resume();
+  if (busy) setTimeout(() => synth.speak(u), 60);
+  else synth.speak(u);
   // Safety net: some engines never fire onend.
   const words = text.split(/\s+/).length;
   setTimeout(finish, Math.max(3000, (words / (2.6 * (opts.rate ?? 0.9))) * 1000 + 2500));
