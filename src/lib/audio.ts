@@ -23,10 +23,56 @@ export function audioCtx(): AudioContext {
   return ctx;
 }
 
-/** iOS starts audio suspended until a tap; call from a tap handler. */
+// iOS mutes Web Audio on silent unless a media element is playing. A looping silent track
+// keeps the app in "media" mode, so Sofi is heard with the ringer off, like a video would be.
+let keeper: HTMLAudioElement | null = null;
+
+function silentWavUrl(): string {
+  const rate = 8000;
+  const n = rate; // one second
+  const buf = new ArrayBuffer(44 + n);
+  const v = new DataView(buf);
+  const text = (o: number, s: string) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+  text(0, 'RIFF');
+  v.setUint32(4, 36 + n, true);
+  text(8, 'WAVE');
+  text(12, 'fmt ');
+  v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true); // PCM
+  v.setUint16(22, 1, true); // mono
+  v.setUint32(24, rate, true);
+  v.setUint32(28, rate, true);
+  v.setUint16(32, 1, true);
+  v.setUint16(34, 8, true); // 8-bit, where 128 is silence
+  text(36, 'data');
+  v.setUint32(40, n, true);
+  new Uint8Array(buf, 44).fill(128);
+  return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+}
+
+function keepMediaMode() {
+  if (!keeper) {
+    keeper = document.createElement('audio');
+    keeper.setAttribute('playsinline', '');
+    keeper.setAttribute('x-webkit-airplay', 'deny');
+    keeper.loop = true;
+    keeper.src = silentWavUrl();
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) keeper?.pause();
+    });
+  }
+  if (keeper.paused) keeper.play().catch(() => {});
+}
+
+let unlocked = false;
+
+/** iOS starts audio suspended until a tap; call from tap handlers (it is cheap to call often). */
 export function unlockAudio() {
+  keepMediaMode();
   const c = audioCtx();
   if (c.state !== 'running') c.resume().catch(() => {});
+  if (unlocked) return;
+  unlocked = true;
   const src = c.createBufferSource();
   src.buffer = c.createBuffer(1, 1, 22050);
   src.connect(c.destination);
