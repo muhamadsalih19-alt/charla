@@ -33,6 +33,25 @@ export function unlockAudio() {
   src.start(0);
 }
 
+/** A short two-note chime through Web Audio, the same path the natural voice uses. */
+export async function beep(): Promise<string> {
+  const c = audioCtx();
+  if (c.state !== 'running') await c.resume().catch(() => {});
+  const t = c.currentTime;
+  for (const [i, f] of [660, 880].entries()) {
+    const osc = c.createOscillator();
+    const g = c.createGain();
+    osc.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t + i * 0.18);
+    g.gain.exponentialRampToValueAtTime(0.4, t + i * 0.18 + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.18 + 0.3);
+    osc.connect(g).connect(c.destination);
+    osc.start(t + i * 0.18);
+    osc.stop(t + i * 0.18 + 0.32);
+  }
+  return c.state;
+}
+
 const cache = new Map<string, Promise<AudioBuffer>>();
 
 /** Spanish speech as decoded audio. Repeats (replay buttons) come from memory. */

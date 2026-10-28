@@ -4,7 +4,7 @@ import { TopBar } from '../components/ui';
 import { PLACEMENT } from '../data/scenarios';
 import { friendlyError, testKey, TUTOR_MODELS } from '../lib/claude';
 import { downloadCalendarReminder, enablePush, isInstalled, REPO_SECRETS_URL, testNotification } from '../lib/reminders';
-import { OPENAI_VOICES } from '../lib/audio';
+import { beep, OPENAI_VOICES } from '../lib/audio';
 import { speak, spanishVoices } from '../lib/speech';
 import { clearData, exportBackup, parseBackup } from '../lib/storage';
 import { useApp } from '../state';
@@ -13,6 +13,59 @@ function hourLabel(h: number) {
   const d = new Date();
   d.setHours(h, 0, 0, 0);
   return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+/** Plays each sound path separately and shows what happened, so audio problems can be pinned down on the phone. */
+function SoundCheck({ hasVoiceKey }: { hasVoiceKey: boolean }) {
+  const [lines, setLines] = useState<string[]>([]);
+  const log = (l: string) => setLines((x) => [...x, l]);
+
+  const tone = async () => {
+    const state = await beep();
+    log(`Test tone played (audio ${state}). Did you hear two notes?`);
+  };
+
+  const phone = () => {
+    if (!('speechSynthesis' in window)) return log('Phone voice: not available in this browser.');
+    const synth = window.speechSynthesis;
+    const es = synth.getVoices().filter((v) => v.lang.toLowerCase().startsWith('es'));
+    const u = new SpeechSynthesisUtterance('Hola, soy Sofi.');
+    u.lang = 'es-MX';
+    if (es[0]) u.voice = es[0];
+    let started = false;
+    u.onstart = () => {
+      started = true;
+      log(`Phone voice started (${es[0]?.name ?? 'default voice'}).`);
+    };
+    u.onerror = (e) => log(`Phone voice error: ${e.error}.`);
+    setTimeout(() => !started && log(`Phone voice never started. Spanish voices found: ${es.length}.`), 3000);
+    synth.cancel();
+    setTimeout(() => synth.speak(u), 80);
+  };
+
+  const standalone = window.matchMedia('(display-mode: standalone)').matches;
+  return (
+    <section className="card form">
+      <h2 className="card-title">Sound check</h2>
+      <p className="small">
+        No sound? Tap both buttons and tell Claude what shows up below. Natural voice: <b>{hasVoiceKey ? 'on' : 'off (no OpenAI key yet)'}</b> · Opened{' '}
+        {standalone ? 'from the Home Screen' : 'in the browser'}.
+      </p>
+      <div className="row">
+        <button className="btn" onClick={tone}>
+          🔔 Test tone
+        </button>
+        <button className="btn" onClick={phone}>
+          🗣️ Phone voice
+        </button>
+      </div>
+      {lines.map((l, i) => (
+        <p key={i} className="fine">
+          {l}
+        </p>
+      ))}
+    </section>
+  );
 }
 
 function ReminderCard({ hour, goal, onHour }: { hour: number; goal: number; onHour: (h: number) => void }) {
@@ -223,6 +276,8 @@ export function SettingsScreen({ go }: { go: Go }) {
           Redo placement chat
         </button>
       </section>
+
+      <SoundCheck hasVoiceKey={!!s.openaiKey} />
 
       <ReminderCard hour={s.reminderHour} goal={s.dailyGoalMinutes} onHour={(h) => set({ reminderHour: h })} />
 
