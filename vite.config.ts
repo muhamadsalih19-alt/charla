@@ -5,6 +5,8 @@ import { VitePWA } from 'vite-plugin-pwa';
 // Served from https://<user>.github.io/charla/
 export default defineConfig({
   base: '/charla/',
+  // shown in Settings so it's easy to tell whether the phone has the latest version
+  define: { __BUILD__: JSON.stringify(new Date().toISOString().slice(0, 16).replace('T', ' ')) },
   plugins: [
     react(),
     VitePWA({

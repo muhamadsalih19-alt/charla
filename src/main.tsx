@@ -7,8 +7,10 @@ import { unlockSpeech } from './lib/speech';
 
 // iOS only lets a page play sound after a tap, so unlock on the first touch anywhere,
 // and re-arm audio on later taps in case iOS paused it while the app was in the background.
-document.addEventListener('pointerup', unlockSpeech, { once: true });
-document.addEventListener('pointerup', unlockAudio);
+for (const ev of ['touchend', 'click'] as const) {
+  document.addEventListener(ev, unlockSpeech, { once: true });
+  document.addEventListener(ev, unlockAudio);
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -13,95 +13,136 @@ const STYLE =
 
 let ctx: AudioContext | null = null;
 
-/** One shared audio context. "playback" tells iOS this is media, so the silent switch doesn't mute it. */
+/** Web Audio is only used to decode speech and drive the 3D lip-sync; it never makes the sound itself. */
 export function audioCtx(): AudioContext {
-  if (!ctx) {
-    const nav = navigator as Navigator & { audioSession?: { type: string } };
-    if (nav.audioSession) nav.audioSession.type = 'playback';
-    ctx = new AudioContext();
-  }
+  if (!ctx) ctx = new AudioContext();
   return ctx;
 }
 
-// iOS mutes Web Audio on silent unless a media element is playing. A looping silent track
-// keeps the app in "media" mode, so Sofi is heard with the ringer off, like a video would be.
-let keeper: HTMLAudioElement | null = null;
+// All sound goes through one <audio> element. iOS mutes Web Audio on silent,
+// but plays media elements like a video, so Sofi is heard with the ringer off.
+let el: HTMLAudioElement | null = null;
 
-function silentWavUrl(): string {
-  const rate = 8000;
-  const n = rate; // one second
-  const buf = new ArrayBuffer(44 + n);
+function media(): HTMLAudioElement {
+  if (!el) {
+    el = new Audio();
+    el.setAttribute('playsinline', '');
+    el.preload = 'auto';
+  }
+  return el;
+}
+
+function wavUrl(samples: Float32Array, rate: number): string {
+  const n = samples.length;
+  const buf = new ArrayBuffer(44 + n * 2);
   const v = new DataView(buf);
-  const text = (o: number, s: string) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+  const text = (o: number, str: string) => [...str].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
   text(0, 'RIFF');
-  v.setUint32(4, 36 + n, true);
+  v.setUint32(4, 36 + n * 2, true);
   text(8, 'WAVE');
   text(12, 'fmt ');
   v.setUint32(16, 16, true);
   v.setUint16(20, 1, true); // PCM
   v.setUint16(22, 1, true); // mono
   v.setUint32(24, rate, true);
-  v.setUint32(28, rate, true);
-  v.setUint16(32, 1, true);
-  v.setUint16(34, 8, true); // 8-bit, where 128 is silence
+  v.setUint32(28, rate * 2, true);
+  v.setUint16(32, 2, true);
+  v.setUint16(34, 16, true);
   text(36, 'data');
-  v.setUint32(40, n, true);
-  new Uint8Array(buf, 44).fill(128);
+  v.setUint32(40, n * 2, true);
+  samples.forEach((x, i) => v.setInt16(44 + i * 2, Math.max(-1, Math.min(1, x)) * 32767, true));
   return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
 }
 
-function keepMediaMode() {
-  if (!keeper) {
-    keeper = document.createElement('audio');
-    keeper.setAttribute('playsinline', '');
-    keeper.setAttribute('x-webkit-airplay', 'deny');
-    keeper.loop = true;
-    keeper.src = silentWavUrl();
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) keeper?.pause();
-    });
-  }
-  if (keeper.paused) keeper.play().catch(() => {});
-}
-
+let silentUrl = '';
 let unlocked = false;
 
-/** iOS starts audio suspended until a tap; call from tap handlers (it is cheap to call often). */
+/** iOS only lets a page play sound after a tap. Playing once from a tap unlocks the element for later. */
 export function unlockAudio() {
-  keepMediaMode();
   const c = audioCtx();
   if (c.state !== 'running') c.resume().catch(() => {});
   if (unlocked) return;
   unlocked = true;
-  const src = c.createBufferSource();
-  src.buffer = c.createBuffer(1, 1, 22050);
-  src.connect(c.destination);
-  src.start(0);
-}
-
-/** A short two-note chime through Web Audio, the same path the natural voice uses. */
-export async function beep(): Promise<string> {
-  const c = audioCtx();
-  if (c.state !== 'running') await c.resume().catch(() => {});
-  const t = c.currentTime;
-  for (const [i, f] of [660, 880].entries()) {
-    const osc = c.createOscillator();
-    const g = c.createGain();
-    osc.frequency.value = f;
-    g.gain.setValueAtTime(0.0001, t + i * 0.18);
-    g.gain.exponentialRampToValueAtTime(0.4, t + i * 0.18 + 0.02);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.18 + 0.3);
-    osc.connect(g).connect(c.destination);
-    osc.start(t + i * 0.18);
-    osc.stop(t + i * 0.18 + 0.32);
+  const a = media();
+  silentUrl ||= wavUrl(new Float32Array(2205), 22050);
+  if (!a.src || a.paused) {
+    a.src = silentUrl;
+    a.play().catch(() => {
+      unlocked = false;
+    });
   }
-  return c.state;
 }
 
-const cache = new Map<string, Promise<AudioBuffer>>();
+let onDone: (() => void) | null = null;
 
-/** Spanish speech as decoded audio. Repeats (replay buttons) come from memory. */
-export function synthesize(key: string, voice: string, text: string, slow = false): Promise<AudioBuffer> {
+/** Plays a sound file. onPlaying fires when sound actually starts; onEnd always fires once. */
+export function playMedia(url: string, cb: { onPlaying?: () => void; onEnd: () => void; onFail?: (m: string) => void }) {
+  stopMedia();
+  const a = media();
+  let ended = false;
+  const end = () => {
+    if (ended) return;
+    ended = true;
+    if (onDone === end) onDone = null;
+    cb.onEnd();
+  };
+  onDone = end;
+  a.onplaying = () => cb.onPlaying?.();
+  a.onended = end;
+  a.onerror = () => {
+    cb.onFail?.('The phone could not play the audio.');
+    end();
+  };
+  a.src = url;
+  a.play().catch((e: unknown) => {
+    cb.onFail?.(e instanceof Error && e.name === 'NotAllowedError' ? 'Tap the screen once, then try again.' : 'The phone could not play the audio.');
+    end();
+  });
+}
+
+export function stopMedia() {
+  const a = el;
+  if (a && !a.paused) a.pause();
+  const f = onDone;
+  onDone = null;
+  f?.();
+}
+
+/** A short two-note chime, played the same way as Sofi's voice. */
+export function beep(): Promise<string> {
+  const rate = 22050;
+  const out = new Float32Array(Math.round(rate * 0.55));
+  [660, 880].forEach((f, k) => {
+    const start = Math.round(k * 0.2 * rate);
+    for (let i = 0; i < rate * 0.3 && start + i < out.length; i++) {
+      const env = Math.min(1, i / 200) * Math.exp(-i / (rate * 0.09));
+      out[start + i] += 0.5 * env * Math.sin((2 * Math.PI * f * i) / rate);
+    }
+  });
+  const url = wavUrl(out, rate);
+  return new Promise((resolve) => {
+    let msg = 'played';
+    playMedia(url, {
+      onFail: (m) => (msg = m),
+      onEnd: () => {
+        URL.revokeObjectURL(url);
+        resolve(msg);
+      },
+    });
+  });
+}
+
+export interface Speech {
+  /** decoded audio, for its length and the lip-sync */
+  buf: AudioBuffer;
+  /** the mp3, for playback */
+  url: string;
+}
+
+const cache = new Map<string, Promise<Speech>>();
+
+/** Spanish speech from OpenAI. Repeats (replay buttons) come from memory. */
+export function synthesize(key: string, voice: string, text: string, slow = false): Promise<Speech> {
   const id = `${voice}|${slow ? 's' : 'n'}|${text}`;
   const hit = cache.get(id);
   if (hit) return hit;
@@ -121,39 +162,18 @@ export function synthesize(key: string, voice: string, text: string, slow = fals
       const detail = await res.text().catch(() => '');
       throw new Error(res.status === 401 ? 'Your OpenAI key was not accepted.' : `OpenAI voice error ${res.status}: ${detail.slice(0, 120)}`);
     }
-    return audioCtx().decodeAudioData(await res.arrayBuffer());
+    const blob = await res.blob();
+    const buf = await audioCtx().decodeAudioData(await blob.arrayBuffer());
+    return { buf, url: URL.createObjectURL(blob) };
   })();
   cache.set(id, job);
   job.catch(() => cache.delete(id));
-  if (cache.size > 60) cache.delete(cache.keys().next().value!);
-  return job;
-}
-
-let current: AudioBufferSourceNode | null = null;
-
-export function playBuffer(buf: AudioBuffer, onEnd: () => void) {
-  stopBuffer();
-  const c = audioCtx();
-  if (c.state !== 'running') c.resume().catch(() => {});
-  const src = c.createBufferSource();
-  src.buffer = buf;
-  src.connect(c.destination);
-  src.onended = () => {
-    if (current === src) current = null;
-    onEnd();
-  };
-  current = src;
-  src.start();
-}
-
-export function stopBuffer() {
-  const src = current;
-  current = null;
-  try {
-    src?.stop();
-  } catch {
-    /* already stopped */
+  if (cache.size > 60) {
+    const oldest = cache.keys().next().value!;
+    cache.get(oldest)?.then((sp) => URL.revokeObjectURL(sp.url)).catch(() => {});
+    cache.delete(oldest);
   }
+  return job;
 }
 
 // ── Lip-sync ────────────────────────────────────────────────

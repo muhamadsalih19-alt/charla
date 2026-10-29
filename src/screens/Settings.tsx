@@ -21,8 +21,8 @@ function SoundCheck({ hasVoiceKey }: { hasVoiceKey: boolean }) {
   const log = (l: string) => setLines((x) => [...x, l]);
 
   const tone = async () => {
-    const state = await beep();
-    log(`Test tone played (audio ${state}). Did you hear two notes?`);
+    const result = await beep();
+    log(result === 'played' ? 'Test tone played. Did you hear two notes?' : `Test tone failed: ${result}`);
   };
 
   const phone = () => {
@@ -49,7 +49,7 @@ function SoundCheck({ hasVoiceKey }: { hasVoiceKey: boolean }) {
       <h2 className="card-title">Sound check</h2>
       <p className="small">
         No sound? Tap both buttons and tell Claude what shows up below. Natural voice: <b>{hasVoiceKey ? 'on' : 'off (no OpenAI key yet)'}</b> · Opened{' '}
-        {standalone ? 'from the Home Screen' : 'in the browser'}.
+        {standalone ? 'from the Home Screen' : 'in the browser'} · Version {__BUILD__} UTC.
       </p>
       <div className="row">
         <button className="btn" onClick={tone}>

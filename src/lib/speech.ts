@@ -1,5 +1,5 @@
 // Text-to-speech (natural OpenAI voice when set up, else the phone's voice) and speech-to-text.
-import { playBuffer, stopBuffer, synthesize, unlockAudio } from './audio';
+import { playMedia, stopMedia, synthesize, unlockAudio } from './audio';
 
 let voicesCache: SpeechSynthesisVoice[] = [];
 
@@ -52,9 +52,9 @@ export interface SpeakOptions {
   onError?: (message: string) => void;
 }
 
-/** Plays decoded speech. The 3D avatar registers one so it can lip-sync; otherwise audio plays directly. */
+/** The 3D avatar registers one to move its lips while the audio plays (it makes no sound itself). */
 export interface SpeechSink {
-  play(buf: AudioBuffer, text: string, onEnd: () => void): void;
+  animate(buf: AudioBuffer, text: string): void;
   stop(): void;
 }
 
@@ -72,7 +72,7 @@ export function setSpeechSink(s: SpeechSink | null) {
 
 function stopNatural() {
   token++;
-  stopBuffer();
+  stopMedia();
   sink?.stop();
 }
 
@@ -90,11 +90,17 @@ export function speak(text: string, opts: SpeakOptions = {}) {
     opts.onEnd?.();
   };
   synthesize(natural.key, natural.voice, text, (opts.rate ?? 0.9) < 0.8)
-    .then((buf) => {
+    .then((sp) => {
       if (mine !== token) return finish();
       opts.onStart?.();
-      if (sink) sink.play(buf, text, finish);
-      else playBuffer(buf, finish);
+      playMedia(sp.url, {
+        onPlaying: () => mine === token && sink?.animate(sp.buf, text),
+        onEnd: () => {
+          sink?.stop();
+          finish();
+        },
+        onFail: (m) => opts.onError?.(m),
+      });
     })
     .catch((e: unknown) => {
       if (mine !== token) return finish();

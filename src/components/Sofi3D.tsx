@@ -30,14 +30,6 @@ export function Sofi3D({ state, expression }: { state: AvatarState; expression?:
     if (status === 'failed') return;
     let alive = true;
     let h: TalkingHead | null = null;
-    let pendingEnd: (() => void) | null = null;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const endNow = () => {
-      clearTimeout(timer);
-      const f = pendingEnd;
-      pendingEnd = null;
-      f?.();
-    };
 
     (async () => {
       try {
@@ -48,6 +40,8 @@ export function Sofi3D({ state, expression }: { state: AvatarState; expression?:
           cameraView: 'upper',
           cameraRotateEnable: false,
           audioCtx: audioCtx(),
+          // the voice plays through an <audio> element (heard on silent); Sofi only moves her lips to it
+          mixerGainSpeech: 0,
           modelFPS: 30,
           modelPixelRatio: Math.min(2, window.devicePixelRatio || 1),
           avatarIdleEyeContact: 0.6,
@@ -61,17 +55,13 @@ export function Sofi3D({ state, expression }: { state: AvatarState; expression?:
         setStatus('ready');
         const th = h;
         setSpeechSink({
-          play(buf, text, onEnd) {
-            endNow();
-            pendingEnd = onEnd;
+          animate(buf, text) {
+            th.stopSpeaking();
             // mouth shapes are computed here, so no lip-sync language module is needed
             th.speakAudio({ audio: buf, ...lipSync(text, buf.duration * 1000) }, { lipsyncLang: 'fi' });
-            th.speakMarker(endNow);
-            timer = setTimeout(endNow, buf.duration * 1000 + 1500);
           },
           stop() {
             th.stopSpeaking();
-            endNow();
           },
         });
       } catch (e) {
@@ -82,7 +72,6 @@ export function Sofi3D({ state, expression }: { state: AvatarState; expression?:
 
     return () => {
       alive = false;
-      endNow();
       setSpeechSink(null);
       head.current = null;
       try {
